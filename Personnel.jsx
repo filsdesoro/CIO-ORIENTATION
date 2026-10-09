@@ -1,6 +1,9 @@
 import { useCallback, useEffect, useState } from 'react'
-import { supabase, messageErreur, LIBELLES_ROLES } from '../lib/supabase'
-import { Alerte, Champ, Chargement, EnTete, Modale, Vide } from '../components/ui'
+import { supabase, messageErreur, LIBELLES_ROLES } from './supabase'
+import { Alerte, Champ, Chargement, EnTete, Modale, Vide } from './ui'
+
+// Nom (slug) de la fonction serveur déployée sur Supabase pour créer les comptes
+const FONCTION_MEMBRE = 'rapid-responder'
 
 export default function Personnel({ profil }) {
   const [membres, setMembres] = useState(null)
@@ -189,7 +192,7 @@ function FormulaireMembre({ etabs, onFermer, onCree }) {
     e.preventDefault()
     setErreur('')
     setEnvoi(true)
-    const { data, error } = await supabase.functions.invoke('creer-membre', {
+    const { data, error } = await supabase.functions.invoke(FONCTION_MEMBRE, {
       body: { ...f, etablissements: f.role === 'conseiller' ? choisis : [] },
     })
     setEnvoi(false)
@@ -202,7 +205,7 @@ function FormulaireMembre({ etabs, onFermer, onCree }) {
         /* message par défaut */
       }
       if (msg.includes('Failed to send') || msg.includes('not found'))
-        msg = "La fonction serveur « creer-membre » n'est pas encore déployée sur Supabase."
+        msg = `La fonction serveur « ${FONCTION_MEMBRE} » est introuvable sur Supabase.`
       return setErreur(msg)
     }
     if (data?.error) return setErreur(data.error)

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
-import { supabase, NIVEAUX, LIBELLES_NIVEAUX, TYPES_ETAB } from '../lib/supabase'
-import { Chargement, EnTete, Vide, Alerte } from '../components/ui'
+import { supabase, NIVEAUX, LIBELLES_NIVEAUX, TYPES_ETAB } from './supabase'
+import { Chargement, EnTete, Vide, Alerte } from './ui'
 
 export default function TableauDeBord({ profil, annee, setPage }) {
   const [donnees, setDonnees] = useState(null)

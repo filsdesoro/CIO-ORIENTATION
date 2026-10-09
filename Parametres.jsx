@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
-import { supabase, messageErreur } from '../lib/supabase'
-import { Alerte, Champ, Chargement, EnTete } from '../components/ui'
+import { supabase, messageErreur } from './supabase'
+import { Alerte, Champ, Chargement, EnTete } from './ui'
 
 export default function Parametres({ profil, onProfilChange }) {
   const [cio, setCio] = useState(null)

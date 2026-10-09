@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { supabase, messageErreur, NIVEAUX, LIBELLES_NIVEAUX } from '../lib/supabase'
-import { Alerte, Champ, Chargement, EnTete, Modale, Vide } from '../components/ui'
+import { supabase, messageErreur, NIVEAUX, LIBELLES_NIVEAUX } from './supabase'
+import { Alerte, Champ, Chargement, EnTete, Modale, Vide } from './ui'
 
 export default function Eleves({ profil, annee }) {
   const [eleves, setEleves] = useState(null)

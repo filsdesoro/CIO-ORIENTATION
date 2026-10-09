@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { LIBELLES_ROLES } from '../lib/supabase'
+import { LIBELLES_ROLES } from './supabase'
 
 const MENU = [
   { id: 'tableau', libelle: 'Tableau de bord', icone: '◧' },

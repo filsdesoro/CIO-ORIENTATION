@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { supabase, messageErreur, TYPES_ETAB, STATUTS_ETAB } from '../lib/supabase'
-import { Alerte, Champ, Chargement, EnTete, Modale, Vide } from '../components/ui'
+import { supabase, messageErreur, TYPES_ETAB, STATUTS_ETAB } from './supabase'
+import { Alerte, Champ, Chargement, EnTete, Modale, Vide } from './ui'
 
 const VIDE = {
   nom: '',

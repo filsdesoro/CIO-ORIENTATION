@@ -1,6 +1,6 @@
 import { useState } from 'react'
-import { supabase, messageErreur } from '../lib/supabase'
-import { Alerte, Champ } from '../components/ui'
+import { supabase, messageErreur } from './supabase'
+import { Alerte, Champ } from './ui'
 
 export default function Login() {
   const [email, setEmail] = useState('')
