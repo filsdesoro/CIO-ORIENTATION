@@ -64,6 +64,17 @@ export const STATUTS_ETAB = {
   prive_confessionnel: 'Privé confessionnel',
 }
 
+export const MILIEUX = {
+  urbain: 'Urbain',
+  rural: 'Rural',
+}
+
+export const REGIMES = {
+  mixte: 'Mixte',
+  garcons: 'Garçons',
+  filles: 'Filles',
+}
+
 export const NIVEAUX = ['6e', '5e', '4e', '3e', '2nde', '1ere', 'Tle']
 export const LIBELLES_NIVEAUX = {
   '6e': '6e', '5e': '5e', '4e': '4e', '3e': '3e', '2nde': '2nde', '1ere': '1ère', Tle: 'Terminale',

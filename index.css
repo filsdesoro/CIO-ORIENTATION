@@ -392,3 +392,9 @@ legend {
 .import-colonnes { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 0 14px; }
 .import-apercu { max-height: 320px; overflow-y: auto; margin-bottom: 8px; }
 .section-titre .etiquette { margin-left: 8px; font-family: var(--police); }
+
+/* Fiche établissement */
+.fiche-section { font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.04em; color: var(--encre-douce); margin: 18px 0 8px; padding-bottom: 4px; border-bottom: 1px solid var(--trait); }
+.fiche-etab .fiche-section:first-child { margin-top: 0; }
+.fiche-etab:disabled input, .fiche-etab:disabled select { background: transparent; color: inherit; opacity: 1; }
+.compte-resultats { margin: -6px 0 10px; font-size: 0.85rem; color: var(--encre-douce); }

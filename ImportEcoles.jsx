@@ -1,6 +1,6 @@
 import { useMemo, useRef, useState } from 'react'
 import readXlsxFile from 'read-excel-file/browser'
-import { supabase, messageErreur, TYPES_ETAB, STATUTS_ETAB } from './supabase'
+import { supabase, messageErreur, TYPES_ETAB, STATUTS_ETAB, MILIEUX } from './supabase'
 import { Alerte, Modale } from './ui'
 import { trouverLocalite } from './localites'
 
@@ -14,12 +14,22 @@ import { trouverLocalite } from './localites'
 // Champs de l'école et mots-clés qui permettent de reconnaître les colonnes
 const CHAMPS = [
   { cle: 'nom', libelle: "Nom de l'école", requis: true, mots: ['nom', 'etablissement', 'ecole', 'denomination', 'libelle'] },
-  { cle: 'code', libelle: 'Code', mots: ['code', 'matricule'] },
-  { cle: 'localite', libelle: 'Localité', mots: ['localite', 'ville', 'commune', 'sous-prefecture', 'sous prefecture', 'lieu', 'quartier'] },
+  { cle: 'code', libelle: 'Code (DSPS)', mots: ['code', 'matricule', 'dsps'] },
+  { cle: 'drena', libelle: 'DRENA', mots: ['drena', 'dren', 'direction regionale'] },
+  { cle: 'region', libelle: 'Région', mots: ['region'] },
+  { cle: 'departement', libelle: 'Département', mots: ['departement'] },
+  { cle: 'sous_prefecture', libelle: 'Sous-préfecture', mots: ['sous-prefecture', 'sous prefecture', 'sous_prefecture', 'sousprefecture', 's/p'] },
+  { cle: 'commune', libelle: 'Commune', mots: ['commune'] },
+  { cle: 'localite', libelle: 'Localité', mots: ['localite', 'ville', 'village', 'lieu'] },
+  { cle: 'quartier', libelle: 'Quartier', mots: ['quartier'] },
+  { cle: 'milieu', libelle: 'Milieu (urbain / rural)', mots: ['milieu', 'zone'] },
+  { cle: 'regime', libelle: 'Régime (mixte, filles…)', mots: ['regime'] },
   { cle: 'type', libelle: 'Type (collège, lycée…)', mots: ['type', 'cycle', 'ordre', 'categorie', 'niveau'] },
   { cle: 'statut', libelle: 'Statut (public / privé)', mots: ['statut', 'public', 'prive', 'secteur'] },
   { cle: 'chef_etablissement', libelle: "Chef d'établissement", mots: ['chef', 'directeur', 'proviseur', 'principal', 'responsable'] },
-  { cle: 'telephone', libelle: 'Téléphone', mots: ['tel', 'telephone', 'contact', 'cel', 'portable'] },
+  { cle: 'chef_contact1', libelle: 'Contact 1 du chef', mots: ['contact 1', 'contact1', 'tel 1', 'telephone 1'] },
+  { cle: 'chef_contact2', libelle: 'Contact 2 du chef', mots: ['contact 2', 'contact2', 'tel 2', 'telephone 2'] },
+  { cle: 'telephone', libelle: "Téléphone de l'école", mots: ['tel', 'telephone', 'contact', 'cel', 'portable'] },
   { cle: 'email', libelle: 'E-mail', mots: ['mail', 'courriel'] },
 ]
 
@@ -92,7 +102,11 @@ function estEntete(cellules) {
 // Associe automatiquement chaque champ à une colonne du fichier.
 // Les champs les plus précis passent d'abord (« Nom du chef » → chef,
 // « Code établissement » → code), le nom de l'école en dernier.
-const ORDRE_ASSOCIATION = ['chef_etablissement', 'email', 'telephone', 'code', 'localite', 'statut', 'type', 'nom']
+const ORDRE_ASSOCIATION = [
+  'chef_etablissement', 'chef_contact1', 'chef_contact2', 'email', 'telephone', 'code', 'drena',
+  'sous_prefecture', 'departement', 'region', 'commune', 'quartier', 'milieu', 'regime', 'localite',
+  'statut', 'type', 'nom',
+]
 
 function associerColonnes(entetes) {
   const pris = new Set()
@@ -123,6 +137,17 @@ function deviner(cle, valeur) {
     if (v.includes('college') && v.includes('lycee')) return 'college_lycee'
     if (v.includes('lycee')) return 'lycee'
     return 'college'
+  }
+  if (cle === 'milieu') {
+    if (v.startsWith('rur')) return 'rural'
+    if (v.startsWith('urb')) return 'urbain'
+    return null
+  }
+  if (cle === 'regime') {
+    if (!v) return null
+    if (v.includes('fille')) return 'filles'
+    if (v.includes('garcon')) return 'garcons'
+    return 'mixte'
   }
   return valeur
 }
@@ -208,7 +233,17 @@ export default function ImportEcoles({ cioId, existants, onFermer, onImporte }) 
           localite: loc ? trouverLocalite(loc)?.nom ?? loc : null,
           type: assoc.type >= 0 && val('type') ? deviner('type', val('type')) : typeDepuisNom(nom) ?? 'college',
           statut: deviner('statut', val('statut')),
+          drena: val('drena') || null,
+          region: val('region') || null,
+          departement: val('departement') || null,
+          sous_prefecture: val('sous_prefecture') || null,
+          commune: /^-+$/.test(val('commune')) ? null : val('commune') || null,
+          quartier: val('quartier') || null,
+          milieu: deviner('milieu', val('milieu')),
+          regime: deviner('regime', val('regime')),
           chef_etablissement: val('chef_etablissement') || null,
+          chef_contact1: val('chef_contact1') || null,
+          chef_contact2: val('chef_contact2') || null,
           telephone: val('telephone') || null,
           email: val('email') || null,
         }
@@ -246,10 +281,9 @@ export default function ImportEcoles({ cioId, existants, onFermer, onImporte }) 
     const contenu =
       '﻿' +
       [
-        'Nom;Code;Localité;Type;Statut;Chef d’établissement;Téléphone;E-mail',
-        'Collège Moderne Bouaké Dar Es Salam;;Bouaké-Ville;Collège;Public;;;',
-        'Lycée Moderne de Dabakala;;Dabakala;Lycée;Public;;;',
-        'Collège Privé Les Élites;;Katiola;Collège;Privé laïc;;;',
+        'Nom;Code DSPS;DRENA;Région;Département;Sous-préfecture;Commune;Localité;Quartier;Milieu;Régime;Type;Statut;Chef d’établissement;Contact 1;Contact 2;Téléphone;E-mail',
+        'Collège Moderne Katiola;000798;KATIOLA;HAMBOL;KATIOLA;KATIOLA;KATIOLA;KATIOLA;PEDIAKAHA;Urbain;Mixte;Collège;Public;;;;;',
+        'Collège Moderne de Niediekaha;198002;KATIOLA;HAMBOL;NIAKARAMADOUGOU;NIEDIEKAHA;;NIEDIEKAHA;;Rural;Mixte;Collège;Public;;;;;',
       ].join('\r\n')
     const url = URL.createObjectURL(new Blob([contenu], { type: 'text/csv;charset=utf-8' }))
     const a = document.createElement('a')
@@ -268,7 +302,7 @@ export default function ImportEcoles({ cioId, existants, onFermer, onImporte }) 
           <strong>{nomFichier || 'Choisissez votre fichier'}</strong>
           <p className="texte-doux">
             <b>Excel</b>, <b>Word</b> ou <b>PDF</b> (ou CSV) contenant un tableau avec une ligne d’en-tête
-            (Nom, Localité, Statut…). Les colonnes sont reconnues automatiquement ; vérifiez l’aperçu avant
+            (Nom, Code, DRENA, Région, Localité, Milieu…). Les colonnes sont reconnues automatiquement ; vérifiez l’aperçu avant
             d’importer.
           </p>
         </div>
@@ -331,6 +365,8 @@ export default function ImportEcoles({ cioId, existants, onFermer, onImporte }) 
                     <tr>
                       <th>Nom</th>
                       <th>Localité</th>
+                      <th>DRENA</th>
+                      <th>Milieu</th>
                       <th>Type</th>
                       <th>Statut</th>
                       <th>Chef</th>
@@ -344,6 +380,8 @@ export default function ImportEcoles({ cioId, existants, onFermer, onImporte }) 
                           {e.code && <div className="cellule-sous">{e.code}</div>}
                         </td>
                         <td>{e.localite || '—'}</td>
+                        <td>{e.drena || '—'}</td>
+                        <td>{MILIEUX[e.milieu] || '—'}</td>
                         <td>{TYPES_ETAB[e.type]}</td>
                         <td>{STATUTS_ETAB[e.statut]}</td>
                         <td>{e.chef_etablissement || '—'}</td>
