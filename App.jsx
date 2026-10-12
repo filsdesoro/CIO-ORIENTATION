@@ -2,7 +2,6 @@ import { useCallback, useEffect, useState } from 'react'
 import { supabase } from './supabase'
 import { Chargement } from './ui'
 import Login from './Login'
-import CreerCio from './CreerCio'
 import Layout from './Layout'
 import TableauDeBord from './TableauDeBord'
 import Etablissements from './Etablissements'
@@ -66,6 +65,11 @@ export default function App() {
     window.location.hash = page
   }, [page])
 
+  // Sans CIO, on ouvre Paramètres en premier (les autres rubriques restent visibles)
+  useEffect(() => {
+    if (profil === null) setPage('parametres')
+  }, [profil])
+
   const deconnexion = async () => {
     await supabase.auth.signOut()
     setProfil(undefined)
@@ -74,8 +78,30 @@ export default function App() {
   if (session === undefined) return <Chargement texte="Ouverture…" />
   if (!session) return <Login />
   if (profil === undefined) return <Chargement texte="Chargement de votre profil…" />
-  if (profil === null)
-    return <CreerCio email={session.user.email} onCree={chargerProfil} onDeconnexion={deconnexion} />
+
+  // Compte sans CIO : on entre directement dans l'application, sur Paramètres,
+  // où l'administrateur renseigne puis enregistre la fiche de son CIO.
+  if (profil === null) {
+    const profilProvisoire = {
+      id: session.user.id,
+      nom: (session.user.email || 'Administrateur').split('@')[0],
+      prenoms: '',
+      role: 'admin_cio',
+      actif: true,
+      cio: null,
+      cio_id: null,
+      sansCio: true,
+    }
+    return (
+      <Layout profil={profilProvisoire} page={page} setPage={setPage} onDeconnexion={deconnexion}>
+        {page === 'parametres' ? (
+          <Parametres profil={profilProvisoire} annee={annee} onProfilChange={chargerProfil} />
+        ) : (
+          <AvantCio rubrique={page} onParametres={() => setPage('parametres')} />
+        )}
+      </Layout>
+    )
+  }
 
   if (!profil.actif) {
     return (
@@ -96,5 +122,35 @@ export default function App() {
     <Layout profil={profil} page={page} setPage={setPage} onDeconnexion={deconnexion}>
       <Page profil={profil} annee={annee} setPage={setPage} onProfilChange={chargerProfil} />
     </Layout>
+  )
+}
+
+const NOMS_RUBRIQUES = {
+  tableau: 'Tableau de bord',
+  etablissements: 'Écoles',
+  personnel: 'Personnels',
+  eleves: 'Élèves',
+}
+
+// Rubrique ouverte avant l'enregistrement de la fiche du CIO
+function AvantCio({ rubrique, onParametres }) {
+  return (
+    <>
+      <div className="page-entete">
+        <div>
+          <h1>{NOMS_RUBRIQUES[rubrique] ?? 'Rubrique'}</h1>
+        </div>
+      </div>
+      <div className="carte">
+        <div className="vide">
+          <div className="vide-tampon">⚙</div>
+          <h3>Enregistrez d’abord la fiche de votre CIO</h3>
+          <p>Cette rubrique sera disponible dès que le nom du CIO aura été enregistré dans Paramètres.</p>
+          <button className="btn btn-plein" onClick={onParametres}>
+            Aller à Paramètres
+          </button>
+        </div>
+      </div>
+    </>
   )
 }

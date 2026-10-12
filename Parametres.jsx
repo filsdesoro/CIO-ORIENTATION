@@ -24,7 +24,13 @@ export default function Parametres({ profil, onProfilChange }) {
   const [erreur, setErreur] = useState('')
   const [info, setInfo] = useState('')
 
+  const creation = !profil.cio_id // compte sans CIO : la fiche sert à le créer
+
   const chargerCio = useCallback(async () => {
+    if (!profil.cio_id) {
+      setCio(Object.fromEntries(CHAMPS_CIO.map((k) => [k, ''])))
+      return
+    }
     const { data, error } = await supabase.from('cio').select('*').eq('id', profil.cio_id).single()
     if (error) setErreur(messageErreur(error))
     setCio(data)
@@ -38,7 +44,14 @@ export default function Parametres({ profil, onProfilChange }) {
 
   return (
     <>
-      <EnTete titre="Paramètres" sousTitre="Identité du CIO, score d’orientation et années scolaires" />
+      <EnTete
+        titre="Paramètres"
+        sousTitre={
+          creation
+            ? 'Bienvenue ! Renseignez la fiche de votre CIO puis cliquez sur « Enregistrer ».'
+            : 'Identité du CIO, score d’orientation et années scolaires'
+        }
+      />
       <Alerte onFermer={() => setErreur('')}>{erreur}</Alerte>
       <Alerte type="succes" onFermer={() => setInfo('')}>
         {info}
@@ -46,6 +59,8 @@ export default function Parametres({ profil, onProfilChange }) {
 
       <IdentiteCio
         cio={cio}
+        creation={creation}
+        nomParDefaut={profil.nom}
         onEnregistre={async () => {
           setInfo('Les informations du CIO ont été enregistrées.')
           await chargerCio()
@@ -55,10 +70,12 @@ export default function Parametres({ profil, onProfilChange }) {
         setErreur={setErreur}
       />
 
-      <div className="deux-colonnes deux-colonnes-egales">
-        <Ponderation cioId={cio.id} setErreur={setErreur} setInfo={setInfo} />
-        <Annees setErreur={setErreur} setInfo={setInfo} onProfilChange={onProfilChange} />
-      </div>
+      {!creation && (
+        <div className="deux-colonnes deux-colonnes-egales">
+          <Ponderation cioId={cio.id} setErreur={setErreur} setInfo={setInfo} />
+          <Annees setErreur={setErreur} setInfo={setInfo} onProfilChange={onProfilChange} />
+        </div>
+      )}
     </>
   )
 }
@@ -69,9 +86,13 @@ export default function Parametres({ profil, onProfilChange }) {
    - les champs sont verrouillés tant qu'on n'a pas cliqué sur « Modifier »
    - « Enregistrer » n'est actif qu'en cours de modification
    ===================================================================== */
-function IdentiteCio({ cio, onEnregistre, onSupprime, setErreur }) {
-  const valeursCio = () => Object.fromEntries(CHAMPS_CIO.map((k) => [k, cio[k] ?? '']))
-  const [edition, setEdition] = useState(false)
+function IdentiteCio({ cio, creation, nomParDefaut, onEnregistre, onSupprime, setErreur }) {
+  const valeursCio = () => ({
+    ...Object.fromEntries(CHAMPS_CIO.map((k) => [k, cio[k] ?? ''])),
+    admin_nom: creation ? (nomParDefaut || '').toUpperCase() : '',
+    identifiant: '',
+  })
+  const [edition, setEdition] = useState(creation)
   const [f, setF] = useState(valeursCio)
   const [envoi, setEnvoi] = useState(false)
   const [envoiLogo, setEnvoiLogo] = useState(false)
@@ -139,6 +160,32 @@ function IdentiteCio({ cio, onEnregistre, onSupprime, setErreur }) {
     if (!edition) return
     setErreur('')
     if (!f.nom.trim()) return setErreur('Le nom du CIO est obligatoire.')
+
+    // Première fois : création du CIO et du compte administrateur
+    if (creation) {
+      const ident = f.identifiant.trim().toLowerCase()
+      if (!/^[a-z0-9._-]{3,30}$/.test(ident))
+        return setErreur('Identifiant : 3 à 30 caractères (lettres minuscules, chiffres, point, tiret).')
+      if (!f.admin_nom.trim()) return setErreur('Votre nom est obligatoire.')
+      setEnvoi(true)
+      const { error } = await supabase.rpc('creer_mon_cio', {
+        p_nom: f.nom,
+        p_identifiant: ident,
+        p_drena: f.drena,
+        p_chef_cio: f.chef_cio,
+        p_telephone: f.telephone,
+        p_telephone2: f.telephone2,
+        p_email: f.email,
+        p_ville: f.ville,
+        p_adresse: f.adresse,
+        p_admin_nom: f.admin_nom,
+      })
+      setEnvoi(false)
+      if (error) return setErreur(messageErreur(error))
+      onEnregistre()
+      return
+    }
+
     setEnvoi(true)
     const donnees = Object.fromEntries(
       CHAMPS_CIO.map((k) => [k, typeof f[k] === 'string' ? f[k].trim() || null : f[k] ?? null])
@@ -165,7 +212,9 @@ function IdentiteCio({ cio, onEnregistre, onSupprime, setErreur }) {
     <form className={`carte fiche-cio ${edition ? 'fiche-en-edition' : ''}`} onSubmit={enregistrer}>
       <div className="fiche-cio-bandeau">
         <h2 className="carte-titre">Identité du CIO</h2>
-        {edition ? (
+        {creation ? (
+          <span className="etiquette etiquette-alerte">Nouvelle fiche</span>
+        ) : edition ? (
           <span className="etiquette etiquette-alerte">Modification en cours</span>
         ) : (
           <span className="etiquette">Lecture seule — cliquez sur « Modifier »</span>
@@ -176,7 +225,9 @@ function IdentiteCio({ cio, onEnregistre, onSupprime, setErreur }) {
         <LogoCio url={f.logo_url} nom={f.nom} />
         <div>
           <div className="champ-label">Logo du CIO</div>
-          {edition ? (
+          {creation ? (
+            <p className="champ-aide">Le logo pourra être ajouté après l’enregistrement, avec « Modifier ».</p>
+          ) : edition ? (
             <>
               <p className="champ-aide">PNG, JPG, WEBP ou SVG · 1 Mo maximum · de préférence carré</p>
               <div className="logo-boutons">
@@ -235,8 +286,32 @@ function IdentiteCio({ cio, onEnregistre, onSupprime, setErreur }) {
         </div>
       </fieldset>
 
+      {creation && (
+        <fieldset className="champs-cio">
+          <legend>Votre compte administrateur</legend>
+          <div className="grille-2">
+            <Champ label="Votre nom" requis>
+              <input value={f.admin_nom} onChange={maj('admin_nom')} required />
+            </Champ>
+            <Champ
+              label="Votre identifiant de connexion"
+              requis
+              aide="Vous vous connecterez avec. Ex : admin.bouake"
+            >
+              <input
+                value={f.identifiant}
+                onChange={(e) => setF({ ...f, identifiant: e.target.value.toLowerCase().replace(/\s/g, '') })}
+                autoCapitalize="none"
+                spellCheck={false}
+                required
+              />
+            </Champ>
+          </div>
+        </fieldset>
+      )}
+
       <div className="barre-boutons">
-        {edition && (
+        {edition && !creation && (
           <button type="button" className="btn btn-discret" onClick={annuler} disabled={envoi}>
             Annuler
           </button>
@@ -244,10 +319,15 @@ function IdentiteCio({ cio, onEnregistre, onSupprime, setErreur }) {
         <button type="submit" className="btn btn-plein" disabled={!edition || envoi || envoiLogo}>
           {envoi ? 'Enregistrement…' : 'Enregistrer'}
         </button>
-        <button type="button" className="btn btn-modifier" onClick={modifier} disabled={edition}>
+        <button type="button" className="btn btn-modifier" onClick={modifier} disabled={edition || creation}>
           Modifier
         </button>
-        <button type="button" className="btn btn-danger" onClick={() => setSuppression(true)} disabled={edition}>
+        <button
+          type="button"
+          className="btn btn-danger"
+          onClick={() => setSuppression(true)}
+          disabled={edition || creation}
+        >
           Supprimer
         </button>
       </div>

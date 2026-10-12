@@ -64,7 +64,7 @@ export default function Etablissements({ profil }) {
   return (
     <>
       <EnTete
-        titre="Établissements"
+        titre="Écoles"
         sousTitre={`${liste.filter((e) => e.actif).length} établissement(s) actif(s) dans la zone`}
         actions={
           estAdmin && (

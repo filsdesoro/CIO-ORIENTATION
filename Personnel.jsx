@@ -52,7 +52,7 @@ export default function Personnel({ profil }) {
   return (
     <>
       <EnTete
-        titre="Personnel"
+        titre="Personnels"
         sousTitre="Conseillers d'orientation et points focaux des établissements"
         actions={
           <button className="btn btn-plein" onClick={() => setAjout(true)}>

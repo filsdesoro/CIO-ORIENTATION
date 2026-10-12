@@ -2,12 +2,13 @@ import { useState } from 'react'
 import { LIBELLES_ROLES } from './supabase'
 import { LogoCio } from './ui'
 
+// Rubriques, dans l'ordre de la fiche « Projet »
 const MENU = [
   { id: 'tableau', libelle: 'Tableau de bord', icone: '◧' },
-  { id: 'etablissements', libelle: 'Établissements', icone: '▦' },
-  { id: 'eleves', libelle: 'Élèves', icone: '◉' },
-  { id: 'personnel', libelle: 'Personnel', icone: '◎', roles: ['admin_cio'] },
   { id: 'parametres', libelle: 'Paramètres', icone: '⚙', roles: ['admin_cio'] },
+  { id: 'etablissements', libelle: 'Écoles', icone: '▦' },
+  { id: 'personnel', libelle: 'Personnels', icone: '◎', roles: ['admin_cio'] },
+  { id: 'eleves', libelle: 'Élèves', icone: '◉' },
 ]
 
 export default function Layout({ profil, page, setPage, onDeconnexion, children }) {
@@ -26,14 +27,14 @@ export default function Layout({ profil, page, setPage, onDeconnexion, children 
           ☰
         </button>
         <LogoCio url={profil.cio?.logo_url} nom={profil.cio?.nom} petit />
-        <span className="barre-titre">{profil.cio?.nom}</span>
+        <span className="barre-titre">{profil.cio?.nom || 'Nouveau CIO'}</span>
       </header>
 
       <nav className={`sidebar ${menuOuvert ? 'ouverte' : ''}`}>
         <div className="sidebar-cio">
           <LogoCio url={profil.cio?.logo_url} nom={profil.cio?.nom} petit />
           <div>
-            <div className="sidebar-nom">{profil.cio?.nom}</div>
+            <div className="sidebar-nom">{profil.cio?.nom || 'Nouveau CIO'}</div>
             <div className="sidebar-sous">{profil.cio?.drena || profil.cio?.ville || '—'}</div>
           </div>
         </div>
@@ -41,7 +42,10 @@ export default function Layout({ profil, page, setPage, onDeconnexion, children 
         <ul className="menu">
           {items.map((m) => (
             <li key={m.id}>
-              <button className={page === m.id ? 'actif' : ''} onClick={() => aller(m.id)}>
+              <button
+                className={page === m.id ? 'actif' : ''}
+                onClick={() => aller(m.id)}
+              >
                 <span className="menu-icone" aria-hidden="true">
                   {m.icone}
                 </span>
