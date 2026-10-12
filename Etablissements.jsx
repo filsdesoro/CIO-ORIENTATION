@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { supabase, messageErreur, TYPES_ETAB, STATUTS_ETAB } from './supabase'
 import { Alerte, Champ, Chargement, EnTete, Modale, Vide } from './ui'
+import ChampLocalite from './ChampLocalite'
 
 const VIDE = {
   nom: '',
@@ -220,14 +221,12 @@ function FormulaireEtablissement({ etab, cioId, onFermer, onEnregistre }) {
             </select>
           </Champ>
         </div>
-        <div className="grille-2">
-          <Champ label="Code de l'établissement">
-            <input value={f.code} onChange={maj('code')} />
-          </Champ>
-          <Champ label="Localité">
-            <input value={f.localite} onChange={maj('localite')} />
-          </Champ>
-        </div>
+        <Champ label="Code de l'établissement">
+          <input value={f.code} onChange={maj('code')} />
+        </Champ>
+        <Champ label="Localité">
+          <ChampLocalite value={f.localite} onChange={(v) => setF({ ...f, localite: v })} />
+        </Champ>
         <Champ label="Chef d'établissement">
           <input value={f.chef_etablissement} onChange={maj('chef_etablissement')} />
         </Champ>

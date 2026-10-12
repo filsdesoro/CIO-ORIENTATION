@@ -379,3 +379,5 @@ legend {
 .btn-lien:hover { color: #174a37; }
 
 .menu button:disabled { opacity: .4; cursor: not-allowed; background: transparent; }
+
+.localite-info { color: var(--vert); font-weight: 600; }
