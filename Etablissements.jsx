@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { supabase, messageErreur, TYPES_ETAB, STATUTS_ETAB } from './supabase'
 import { Alerte, Champ, Chargement, EnTete, Modale, Vide } from './ui'
 import ChampLocalite from './ChampLocalite'
+import ImportEcoles from './ImportEcoles'
 
 const VIDE = {
   nom: '',
@@ -20,6 +21,7 @@ export default function Etablissements({ profil }) {
   const [affectations, setAffectations] = useState({})
   const [recherche, setRecherche] = useState('')
   const [voirInactifs, setVoirInactifs] = useState(false)
+  const [importOuvert, setImportOuvert] = useState(false)
   const [edition, setEdition] = useState(null) // null | {} (nouveau) | établissement
   const [erreur, setErreur] = useState('')
   const [info, setInfo] = useState('')
@@ -69,9 +71,14 @@ export default function Etablissements({ profil }) {
         sousTitre={`${liste.filter((e) => e.actif).length} établissement(s) actif(s) dans la zone`}
         actions={
           estAdmin && (
-            <button className="btn btn-plein" onClick={() => setEdition({})}>
-              + Ajouter un établissement
-            </button>
+            <>
+              <button className="btn" onClick={() => setImportOuvert(true)}>
+                ⇪ Importer un fichier Excel
+              </button>
+              <button className="btn btn-plein" onClick={() => setEdition({})}>
+                + Ajouter un établissement
+              </button>
+            </>
           )
         }
       />
@@ -153,6 +160,19 @@ export default function Etablissements({ profil }) {
           </div>
         )}
       </div>
+
+      {importOuvert && (
+        <ImportEcoles
+          cioId={profil.cio_id}
+          existants={liste}
+          onFermer={() => setImportOuvert(false)}
+          onImporte={(msg) => {
+            setImportOuvert(false)
+            setInfo(msg)
+            charger()
+          }}
+        />
+      )}
 
       {edition && (
         <FormulaireEtablissement
