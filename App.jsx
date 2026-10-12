@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
-import { supabase } from './supabase'
+import { supabase, messageErreur } from './supabase'
 import { Chargement } from './ui'
 import Login from './Login'
 import Layout from './Layout'
@@ -11,10 +11,10 @@ import Parametres from './Parametres'
 
 const PAGES = {
   tableau: TableauDeBord,
+  parametres: Parametres,
   etablissements: Etablissements,
   personnel: Personnel,
   eleves: Eleves,
-  parametres: Parametres,
 }
 
 function pageInitiale() {
@@ -22,11 +22,14 @@ function pageInitiale() {
   return PAGES[h] ? h : 'tableau'
 }
 
+const SELECTION_PROFIL = '*, cio(*), etab:etablissements!personnel_etablissement_id_fkey(nom)'
+
 export default function App() {
   const [session, setSession] = useState(undefined) // undefined = vérification en cours
   const [profil, setProfil] = useState(undefined)
   const [annee, setAnnee] = useState(null)
   const [page, setPage] = useState(pageInitiale)
+  const [erreur, setErreur] = useState('')
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => setSession(data.session))
@@ -39,12 +42,12 @@ export default function App() {
       setProfil(undefined)
       return
     }
+    setErreur('')
+    const lireProfil = () =>
+      supabase.from('personnel').select(SELECTION_PROFIL).eq('id', session.user.id).maybeSingle()
+
     const [{ data: p }, { data: a }] = await Promise.all([
-      supabase
-        .from('personnel')
-        .select('*, cio(*), etab:etablissements!personnel_etablissement_id_fkey(nom)')
-        .eq('id', session.user.id)
-        .maybeSingle(),
+      lireProfil(),
       supabase
         .from('annees_scolaires')
         .select('*')
@@ -53,8 +56,23 @@ export default function App() {
         .limit(1)
         .maybeSingle(),
     ])
-    setProfil(p ?? null)
     setAnnee(a ?? null)
+
+    if (p) {
+      setProfil(p)
+      return
+    }
+
+    // Première connexion : une fiche CIO provisoire est créée automatiquement,
+    // pour que toutes les rubriques soient utilisables tout de suite.
+    const { error } = await supabase.rpc('initialiser_compte')
+    if (error) {
+      setErreur(messageErreur(error))
+      setProfil(null)
+      return
+    }
+    const { data: p2 } = await lireProfil()
+    setProfil(p2 ?? null)
   }, [session])
 
   useEffect(() => {
@@ -65,11 +83,6 @@ export default function App() {
     window.location.hash = page
   }, [page])
 
-  // Sans CIO, on ouvre Paramètres en premier (les autres rubriques restent visibles)
-  useEffect(() => {
-    if (profil === null) setPage('parametres')
-  }, [profil])
-
   const deconnexion = async () => {
     await supabase.auth.signOut()
     setProfil(undefined)
@@ -77,29 +90,26 @@ export default function App() {
 
   if (session === undefined) return <Chargement texte="Ouverture…" />
   if (!session) return <Login />
-  if (profil === undefined) return <Chargement texte="Chargement de votre profil…" />
+  if (profil === undefined) return <Chargement texte="Chargement de votre espace…" />
 
-  // Compte sans CIO : on entre directement dans l'application, sur Paramètres,
-  // où l'administrateur renseigne puis enregistre la fiche de son CIO.
   if (profil === null) {
-    const profilProvisoire = {
-      id: session.user.id,
-      nom: (session.user.email || 'Administrateur').split('@')[0],
-      prenoms: '',
-      role: 'admin_cio',
-      actif: true,
-      cio: null,
-      cio_id: null,
-      sansCio: true,
-    }
     return (
-      <Layout profil={profilProvisoire} page={page} setPage={setPage} onDeconnexion={deconnexion}>
-        {page === 'parametres' ? (
-          <Parametres profil={profilProvisoire} annee={annee} onProfilChange={chargerProfil} />
-        ) : (
-          <AvantCio rubrique={page} onParametres={() => setPage('parametres')} />
-        )}
-      </Layout>
+      <div className="ecran-centre">
+        <div className="carte carte-etroite">
+          <h2>Espace indisponible</h2>
+          <p className="texte-doux">
+            Votre espace n'a pas pu être préparé. {erreur && <>Détail : {erreur}</>}
+          </p>
+          <div className="actions-formulaire">
+            <button className="btn btn-discret" onClick={deconnexion}>
+              Se déconnecter
+            </button>
+            <button className="btn btn-plein" onClick={chargerProfil}>
+              Réessayer
+            </button>
+          </div>
+        </div>
+      </div>
     )
   }
 
@@ -122,35 +132,5 @@ export default function App() {
     <Layout profil={profil} page={page} setPage={setPage} onDeconnexion={deconnexion}>
       <Page profil={profil} annee={annee} setPage={setPage} onProfilChange={chargerProfil} />
     </Layout>
-  )
-}
-
-const NOMS_RUBRIQUES = {
-  tableau: 'Tableau de bord',
-  etablissements: 'Écoles',
-  personnel: 'Personnels',
-  eleves: 'Élèves',
-}
-
-// Rubrique ouverte avant l'enregistrement de la fiche du CIO
-function AvantCio({ rubrique, onParametres }) {
-  return (
-    <>
-      <div className="page-entete">
-        <div>
-          <h1>{NOMS_RUBRIQUES[rubrique] ?? 'Rubrique'}</h1>
-        </div>
-      </div>
-      <div className="carte">
-        <div className="vide">
-          <div className="vide-tampon">⚙</div>
-          <h3>Enregistrez d’abord la fiche de votre CIO</h3>
-          <p>Cette rubrique sera disponible dès que le nom du CIO aura été enregistré dans Paramètres.</p>
-          <button className="btn btn-plein" onClick={onParametres}>
-            Aller à Paramètres
-          </button>
-        </div>
-      </div>
-    </>
   )
 }

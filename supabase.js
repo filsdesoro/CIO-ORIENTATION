@@ -8,7 +8,26 @@ const SUPABASE_URL =
 const SUPABASE_ANON_KEY =
   import.meta.env.VITE_SUPABASE_ANON_KEY || 'sb_publishable_IODk-ORPz4dEeqAyEKmuXw_c9DTL515'
 
-export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
+// La session n'est gardée que dans l'onglet ouvert (sessionStorage) :
+// - un rechargement (F5) garde la personne connectée ;
+// - à chaque nouvelle ouverture du site, la page de connexion s'affiche.
+function stockageSession() {
+  try {
+    // Efface l'ancienne session conservée durablement (versions précédentes)
+    window.localStorage.removeItem('sb-tseqjsulgitmgecskqzx-auth-token')
+    return window.sessionStorage
+  } catch {
+    return undefined
+  }
+}
+
+export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+  auth: {
+    storage: stockageSession(),
+    persistSession: true,
+    autoRefreshToken: true,
+  },
+})
 
 // Traduit les erreurs techniques les plus courantes en messages clairs
 export function messageErreur(error) {
