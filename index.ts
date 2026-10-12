@@ -1,10 +1,9 @@
 // =====================================================================
-//  CIO-ORIENTATION — Fonction serveur « creer-membre »
+//  CIO-ORIENTATION — Fonction serveur « creer-membre » (déployée sous le nom rapid-responder)
 //  Permet à l'administrateur d'un CIO de créer le compte d'un
 //  conseiller ou d'un point focal, sans ouvrir les inscriptions publiques.
 //
-//  Déploiement : Supabase → Edge Functions → Deploy a new function
-//  → nom « creer-membre » → coller ce fichier → Deploy.
+//  Chaque membre reçoit un identifiant court (connexion) ; l'e-mail est facultatif.
 // =====================================================================
 
 import { createClient } from "npm:@supabase/supabase-js@2";
@@ -54,7 +53,10 @@ Deno.serve(async (req) => {
 
     // 3. Contrôle des données
     const body = await req.json();
-    const email = String(body.email ?? "").trim().toLowerCase();
+    const identifiant = String(body.identifiant ?? "").trim().toLowerCase();
+    const emailSaisi = String(body.email ?? "").trim().toLowerCase();
+    // Sans e-mail, on crée une adresse interne à partir de l'identifiant
+    const email = emailSaisi || `${identifiant}@cio-orientation.local`;
     const password = String(body.password ?? "");
     const nom = String(body.nom ?? "").trim();
     const prenoms = String(body.prenoms ?? "").trim() || null;
@@ -63,7 +65,12 @@ Deno.serve(async (req) => {
     const etablissementId = body.etablissement_id || null;
     const etablissements: string[] = Array.isArray(body.etablissements) ? body.etablissements : [];
 
-    if (!email.includes("@")) return json({ error: "Adresse e-mail invalide" }, 400);
+    if (!/^[a-z0-9._-]{3,30}$/.test(identifiant)) {
+      return json({ error: "Identifiant invalide : 3 à 30 caractères (lettres minuscules, chiffres, . - _)" }, 400);
+    }
+    if (emailSaisi && !emailSaisi.includes("@")) return json({ error: "Adresse e-mail invalide" }, 400);
+    const { data: pris } = await admin.from("personnel").select("id").eq("identifiant", identifiant).maybeSingle();
+    if (pris) return json({ error: "Cet identifiant est déjà utilisé" }, 400);
     if (password.length < 8) return json({ error: "Le mot de passe doit contenir au moins 8 caractères" }, 400);
     if (!nom) return json({ error: "Le nom est obligatoire" }, 400);
     if (!["admin_cio", "conseiller", "point_focal"].includes(role)) {
@@ -107,7 +114,8 @@ Deno.serve(async (req) => {
       prenoms,
       role,
       telephone,
-      email,
+      email: emailSaisi || null,
+      identifiant,
     });
     if (persError) {
       await admin.auth.admin.deleteUser(newId);

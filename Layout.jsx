@@ -58,6 +58,7 @@ export default function Layout({ profil, page, setPage, onDeconnexion, children 
               <div className="utilisateur-nom">
                 {profil.nom} {profil.prenoms}
               </div>
+              {profil.identifiant && <div className="utilisateur-identifiant">@{profil.identifiant}</div>}
               <div className="utilisateur-role">
                 {LIBELLES_ROLES[profil.role]}
                 {profil.role === 'point_focal' && profil.etab?.nom

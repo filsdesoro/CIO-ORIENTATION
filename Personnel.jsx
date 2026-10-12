@@ -11,6 +11,7 @@ export default function Personnel({ profil }) {
   const [affect, setAffect] = useState({}) // conseiller_id -> [etablissement_id]
   const [ajout, setAjout] = useState(false)
   const [affectation, setAffectation] = useState(null)
+  const [identifiantDe, setIdentifiantDe] = useState(null)
   const [erreur, setErreur] = useState('')
   const [info, setInfo] = useState('')
 
@@ -76,6 +77,7 @@ export default function Personnel({ profil }) {
             <thead>
               <tr>
                 <th>Nom</th>
+                <th>Identifiant</th>
                 <th>Rôle</th>
                 <th>Établissement(s)</th>
                 <th>Contact</th>
@@ -90,6 +92,16 @@ export default function Personnel({ profil }) {
                       {m.nom} {m.prenoms}
                     </div>
                     {m.id === profil.id && <span className="etiquette">Vous</span>}
+                  </td>
+                  <td>
+                    {m.identifiant ? (
+                      <span className="mono identifiant">{m.identifiant}</span>
+                    ) : (
+                      <span className="etiquette etiquette-alerte">À définir</span>
+                    )}
+                    <button className="btn-lien" onClick={() => setIdentifiantDe(m)}>
+                      {m.identifiant ? 'modifier' : 'définir'}
+                    </button>
                   </td>
                   <td>
                     <span className={`etiquette etiquette-${m.role}`}>{LIBELLES_ROLES[m.role]}</span>
@@ -139,6 +151,18 @@ export default function Personnel({ profil }) {
         />
       )}
 
+      {identifiantDe && (
+        <FormulaireIdentifiant
+          membre={identifiantDe}
+          onFermer={() => setIdentifiantDe(null)}
+          onEnregistre={(nouveau) => {
+            setInfo(`Identifiant de ${identifiantDe.nom} : ${nouveau}`)
+            setIdentifiantDe(null)
+            charger()
+          }}
+        />
+      )}
+
       {affectation && (
         <FormulaireAffectation
           membre={affectation}
@@ -177,6 +201,7 @@ function FormulaireMembre({ etabs, onFermer, onCree }) {
   const [f, setF] = useState({
     nom: '',
     prenoms: '',
+    identifiant: '',
     email: '',
     telephone: '',
     password: '',
@@ -209,7 +234,9 @@ function FormulaireMembre({ etabs, onFermer, onCree }) {
       return setErreur(msg)
     }
     if (data?.error) return setErreur(data.error)
-    onCree(`Compte créé pour ${f.nom}. Communiquez-lui son e-mail et son mot de passe.`)
+    onCree(
+      `Compte créé pour ${f.nom}. Identifiant : ${f.identifiant} — communiquez-lui cet identifiant et son mot de passe.`
+    )
   }
 
   return (
@@ -231,9 +258,23 @@ function FormulaireMembre({ etabs, onFermer, onCree }) {
             <input value={f.prenoms} onChange={maj('prenoms')} />
           </Champ>
         </div>
+        <Champ
+          label="Identifiant de connexion"
+          requis
+          aide="3 à 30 caractères : lettres minuscules, chiffres, point, tiret. Ex : soro.k"
+        >
+          <input
+            value={f.identifiant}
+            onChange={(e) => setF({ ...f, identifiant: e.target.value.toLowerCase().replace(/\s/g, '') })}
+            pattern="[a-z0-9._\-]{3,30}"
+            autoCapitalize="none"
+            spellCheck={false}
+            required
+          />
+        </Champ>
         <div className="grille-2">
-          <Champ label="E-mail de connexion" requis>
-            <input type="email" value={f.email} onChange={maj('email')} required />
+          <Champ label="E-mail" aide="Facultatif">
+            <input type="email" value={f.email} onChange={maj('email')} />
           </Champ>
           <Champ label="Téléphone">
             <input value={f.telephone} onChange={maj('telephone')} />
@@ -321,6 +362,58 @@ function FormulaireAffectation({ membre, etabs, actuels, onFermer, onEnregistre 
           {envoi ? 'Enregistrement…' : 'Enregistrer'}
         </button>
       </div>
+    </Modale>
+  )
+}
+
+function FormulaireIdentifiant({ membre, onFermer, onEnregistre }) {
+  const [valeur, setValeur] = useState(membre.identifiant ?? '')
+  const [erreur, setErreur] = useState('')
+  const [envoi, setEnvoi] = useState(false)
+
+  const enregistrer = async (e) => {
+    e.preventDefault()
+    setErreur('')
+    const nouveau = valeur.trim().toLowerCase()
+    if (!/^[a-z0-9._-]{3,30}$/.test(nouveau))
+      return setErreur('3 à 30 caractères : lettres minuscules, chiffres, point, tiret ou tiret bas.')
+    setEnvoi(true)
+    const { error } = await supabase.from('personnel').update({ identifiant: nouveau }).eq('id', membre.id)
+    setEnvoi(false)
+    if (error) {
+      if (error.code === '23505') return setErreur('Cet identifiant est déjà utilisé.')
+      if (error.code === '23514') return setErreur('Format invalide.')
+      return setErreur(messageErreur(error))
+    }
+    onEnregistre(nouveau)
+  }
+
+  return (
+    <Modale titre={`Identifiant de ${membre.nom}`} onFermer={onFermer}>
+      <form onSubmit={enregistrer}>
+        <p className="texte-doux">
+          C'est avec cet identifiant (et son mot de passe) que la personne se connecte.
+        </p>
+        <Alerte onFermer={() => setErreur('')}>{erreur}</Alerte>
+        <Champ label="Identifiant de connexion" requis aide="Ex : soro.k, admin.bouake, focal.dares">
+          <input
+            value={valeur}
+            onChange={(e) => setValeur(e.target.value.toLowerCase().replace(/\s/g, ''))}
+            autoCapitalize="none"
+            spellCheck={false}
+            autoFocus
+            required
+          />
+        </Champ>
+        <div className="actions-formulaire">
+          <button type="button" className="btn btn-discret" onClick={onFermer}>
+            Annuler
+          </button>
+          <button className="btn btn-plein" disabled={envoi}>
+            {envoi ? 'Enregistrement…' : 'Enregistrer'}
+          </button>
+        </div>
+      </form>
     </Modale>
   )
 }
