@@ -282,3 +282,59 @@ legend {
   .tableau-defilant { margin: 0 -16px; padding: 0 16px; }
   .page-entete h1 { font-size: 24px; }
 }
+
+/* ---------- Paramètres : identité du CIO ---------- */
+.btn-danger { color: var(--rouge); border-color: #e7c3bf; }
+.btn-danger:hover { background: var(--rouge-clair); border-color: var(--rouge); }
+.btn-danger-plein { background: var(--rouge); border-color: var(--rouge); color: #fff; }
+.btn-danger-plein:hover { background: #962b25; }
+.btn-danger-plein:disabled { opacity: .45; cursor: not-allowed; }
+
+.fiche-cio { margin-bottom: 18px; }
+.fiche-cio-entete { display: flex; gap: 18px; align-items: center; flex-wrap: wrap; padding-bottom: 18px; border-bottom: 1px dashed var(--trait); }
+.fiche-cio-titre { flex: 1; min-width: 200px; }
+.fiche-cio-titre h2 { font-size: 24px; margin: 4px 0 2px; }
+.fiche-cio-titre .texte-doux { margin: 0; }
+.fiche-cio-titre .etape { margin-bottom: 0; }
+.fiche-cio-actions { display: flex; gap: 10px; }
+.fiche-cio-infos {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 16px 24px; margin: 18px 0 0;
+}
+.info dt { font-size: 12.5px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; color: var(--encre-douce); }
+.info dd { margin: 2px 0 0; font-weight: 600; overflow-wrap: anywhere; }
+.info dd a { color: var(--vert); text-decoration: none; }
+.info dd a:hover { text-decoration: underline; }
+.texte-vide { color: #a9a294; font-weight: 400; font-style: italic; }
+
+.logo-cio {
+  width: 84px; height: 84px; border-radius: 14px; object-fit: contain; background: #fff;
+  border: 1px solid var(--trait); flex-shrink: 0; padding: 6px;
+}
+.logo-cio-vide {
+  display: grid; place-items: center; background: var(--orange); border-color: var(--orange);
+  color: #fff; font-weight: 700; letter-spacing: .05em; font-size: 20px; padding: 0;
+}
+.logo-cio-petit { width: 42px; height: 42px; border-radius: 10px; padding: 3px; }
+.logo-cio-petit.logo-cio-vide { font-size: 13px; padding: 0; }
+.logo-edition {
+  display: flex; gap: 16px; align-items: center; padding: 14px; margin-bottom: 18px;
+  background: var(--papier); border-radius: var(--rayon);
+}
+.logo-edition .champ-aide { margin: 2px 0 8px; display: block; }
+.logo-boutons { display: flex; gap: 8px; flex-wrap: wrap; }
+
+.zone-danger {
+  background: var(--rouge-clair); color: #6e211c; border-radius: 8px; padding: 12px 14px; margin-bottom: 16px; font-size: 14.5px;
+}
+.zone-danger ul { margin: 8px 0; padding-left: 20px; }
+.deux-colonnes-egales { grid-template-columns: 1fr 1fr; }
+
+@media (max-width: 900px) {
+  .deux-colonnes-egales { grid-template-columns: 1fr; }
+}
+@media (max-width: 760px) {
+  .fiche-cio-actions { width: 100%; }
+  .fiche-cio-actions .btn { flex: 1; }
+  .logo-cio:not(.logo-cio-petit) { width: 68px; height: 68px; }
+  .barre-mobile .logo-cio-petit { width: 32px; height: 32px; border-radius: 8px; font-size: 11px; }
+}

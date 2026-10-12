@@ -4,10 +4,12 @@ import { Alerte, Champ } from './ui'
 
 const VIDE = {
   nom: '',
-  ville: '',
   drena: '',
-  adresse: '',
+  chef_cio: '',
   telephone: '',
+  telephone2: '',
+  ville: '',
+  adresse: '',
   email: '',
   admin_nom: '',
   admin_prenoms: '',
@@ -25,7 +27,7 @@ export default function CreerCio({ email, onCree, onDeconnexion }) {
     e.preventDefault()
     setErreur('')
     setEnvoi(true)
-    const { error } = await supabase.rpc('creer_cio', {
+    const { data: cioId, error } = await supabase.rpc('creer_cio', {
       p_nom: f.nom,
       p_ville: f.ville,
       p_drena: f.drena,
@@ -36,8 +38,20 @@ export default function CreerCio({ email, onCree, onDeconnexion }) {
       p_admin_prenoms: f.admin_prenoms,
       p_admin_telephone: f.admin_telephone,
     })
+    if (error) {
+      setEnvoi(false)
+      return setErreur(messageErreur(error))
+    }
+
+    // Champs ajoutés par la migration 03 (chef du CIO, contact 2)
+    const complements = {
+      chef_cio: f.chef_cio.trim() || null,
+      telephone2: f.telephone2.trim() || null,
+    }
+    if (cioId && (complements.chef_cio || complements.telephone2)) {
+      await supabase.from('cio').update(complements).eq('id', cioId)
+    }
     setEnvoi(false)
-    if (error) return setErreur(messageErreur(error))
     onCree()
   }
 
@@ -48,34 +62,42 @@ export default function CreerCio({ email, onCree, onDeconnexion }) {
         <h2>Créer votre CIO</h2>
         <p className="texte-doux">
           Votre compte <strong>{email}</strong> n'est rattaché à aucun CIO. Renseignez votre centre :
-          vous en deviendrez l'administrateur et pourrez ensuite ajouter les établissements et les
-          conseillers de votre zone.
+          vous en deviendrez l'administrateur et pourrez ensuite ajouter le logo, les établissements et
+          les conseillers de votre zone.
         </p>
 
         <Alerte onFermer={() => setErreur('')}>{erreur}</Alerte>
 
         <fieldset>
           <legend>Le centre</legend>
-          <Champ label="Nom du CIO" requis>
-            <input value={f.nom} onChange={maj('nom')} placeholder="ex : CIO de Bouaké" required />
-          </Champ>
           <div className="grille-2">
-            <Champ label="Ville">
-              <input value={f.ville} onChange={maj('ville')} />
+            <Champ label="Nom du CIO" requis>
+              <input value={f.nom} onChange={maj('nom')} placeholder="ex : CIO de Bouaké" required autoFocus />
             </Champ>
-            <Champ label="DRENA de rattachement">
+            <Champ label="DRENA du CIO">
               <input value={f.drena} onChange={maj('drena')} placeholder="ex : DRENA Bouaké 1" />
             </Champ>
           </div>
-          <Champ label="Adresse">
-            <input value={f.adresse} onChange={maj('adresse')} />
+          <Champ label="Chef du CIO (DCIO)">
+            <input value={f.chef_cio} onChange={maj('chef_cio')} placeholder="Nom et prénoms du directeur" />
           </Champ>
           <div className="grille-2">
-            <Champ label="Téléphone du centre">
-              <input value={f.telephone} onChange={maj('telephone')} />
+            <Champ label="Contact 1">
+              <input type="tel" value={f.telephone} onChange={maj('telephone')} />
             </Champ>
+            <Champ label="Contact 2">
+              <input type="tel" value={f.telephone2} onChange={maj('telephone2')} />
+            </Champ>
+          </div>
+          <div className="grille-3">
             <Champ label="E-mail du centre">
               <input type="email" value={f.email} onChange={maj('email')} />
+            </Champ>
+            <Champ label="Ville">
+              <input value={f.ville} onChange={maj('ville')} />
+            </Champ>
+            <Champ label="Adresse">
+              <input value={f.adresse} onChange={maj('adresse')} />
             </Champ>
           </div>
         </fieldset>
@@ -91,7 +113,7 @@ export default function CreerCio({ email, onCree, onDeconnexion }) {
             </Champ>
           </div>
           <Champ label="Téléphone">
-            <input value={f.admin_telephone} onChange={maj('admin_telephone')} />
+            <input type="tel" value={f.admin_telephone} onChange={maj('admin_telephone')} />
           </Champ>
         </fieldset>
 

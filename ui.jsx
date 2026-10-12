@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 
 export function Champ({ label, children, aide, requis }) {
   return (
@@ -78,5 +78,18 @@ export function EnTete({ titre, sousTitre, actions }) {
       </div>
       {actions && <div className="page-actions">{actions}</div>}
     </div>
+  )
+}
+
+// Logo du CIO (image enregistrée) ou pastille « CIO » par défaut
+export function LogoCio({ url, nom, petit }) {
+  const [casse, setCasse] = useState(false)
+  useEffect(() => setCasse(false), [url])
+  const classe = petit ? 'logo-cio logo-cio-petit' : 'logo-cio'
+  if (url && !casse) return <img className={classe} src={url} alt={`Logo ${nom ?? 'du CIO'}`} onError={() => setCasse(true)} />
+  return (
+    <span className={`${classe} logo-cio-vide`} aria-hidden="true">
+      CIO
+    </span>
   )
 }

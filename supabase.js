@@ -19,6 +19,8 @@ export function messageErreur(error) {
   if (error.code === '23505' || msg.includes('duplicate key')) return 'Cet enregistrement existe déjà.'
   if (error.code === '42501' || msg.includes('row-level security'))
     return "Vous n'avez pas les droits pour cette action."
+  if (error.code === '23503' || msg.includes('foreign key'))
+    return 'Impossible : cet élément est encore utilisé ailleurs dans l’application.'
   if (msg.includes('Failed to fetch')) return 'Connexion impossible. Vérifiez votre accès internet.'
   return msg
 }
