@@ -338,3 +338,24 @@ legend {
   .logo-cio:not(.logo-cio-petit) { width: 68px; height: 68px; }
   .barre-mobile .logo-cio-petit { width: 32px; height: 32px; border-radius: 8px; font-size: 11px; }
 }
+
+/* ---------- Fiche CIO : trois boutons ---------- */
+.fiche-cio-bandeau { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 14px; }
+.fiche-cio-bandeau .carte-titre { margin-bottom: 0 !important; }
+.fiche-en-edition { border-color: var(--vert); box-shadow: 0 0 0 3px var(--vert-clair), var(--ombre); }
+.champs-cio { margin: 0; }
+.champs-cio:disabled input { background: var(--papier); color: var(--encre); border-color: transparent; cursor: default; opacity: 1; -webkit-text-fill-color: var(--encre); }
+.champs-cio:disabled input::placeholder { color: transparent; }
+.barre-boutons {
+  display: flex; justify-content: flex-end; align-items: center; gap: 10px; flex-wrap: wrap;
+  margin-top: 8px; padding-top: 16px; border-top: 1px dashed var(--trait);
+}
+.barre-boutons .btn { min-width: 120px; }
+.barre-boutons .btn-discret { min-width: 0; margin-right: auto; }
+.btn-modifier { background: var(--bleu-clair); border-color: #bcd0e4; color: var(--bleu); }
+.btn-modifier:hover { border-color: var(--bleu); }
+.barre-boutons .btn:disabled { opacity: .4; cursor: not-allowed; transform: none; }
+@media (max-width: 760px) {
+  .barre-boutons .btn { flex: 1; min-width: 0; }
+  .barre-boutons .btn-discret { flex-basis: 100%; }
+}

@@ -64,19 +64,29 @@ export default function Parametres({ profil, onProfilChange }) {
 }
 
 /* =====================================================================
-   Identité du CIO : lecture → Modifier → Enregistrer / Annuler ; Supprimer
+   Identité du CIO — une seule fiche, trois boutons toujours visibles :
+   Enregistrer · Modifier · Supprimer
+   - les champs sont verrouillés tant qu'on n'a pas cliqué sur « Modifier »
+   - « Enregistrer » n'est actif qu'en cours de modification
    ===================================================================== */
 function IdentiteCio({ cio, onEnregistre, onSupprime, setErreur }) {
+  const valeursCio = () => Object.fromEntries(CHAMPS_CIO.map((k) => [k, cio[k] ?? '']))
   const [edition, setEdition] = useState(false)
-  const [f, setF] = useState(null)
+  const [f, setF] = useState(valeursCio)
   const [envoi, setEnvoi] = useState(false)
   const [envoiLogo, setEnvoiLogo] = useState(false)
   const [suppression, setSuppression] = useState(false)
-  const logoTemporaire = useRef(null) // logo envoyé pendant l'édition, pas encore enregistré
+  const logoTemporaire = useRef(null) // logo envoyé pendant la modification, pas encore enregistré
   const champFichier = useRef(null)
 
-  const ouvrirEdition = () => {
-    setF(Object.fromEntries(CHAMPS_CIO.map((k) => [k, cio[k] ?? ''])))
+  // Quand les données du CIO changent (après enregistrement), on rafraîchit la fiche
+  useEffect(() => {
+    if (!edition) setF(valeursCio())
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [cio])
+
+  const modifier = () => {
+    setF(valeursCio())
     logoTemporaire.current = null
     setEdition(true)
   }
@@ -84,6 +94,7 @@ function IdentiteCio({ cio, onEnregistre, onSupprime, setErreur }) {
   const annuler = async () => {
     if (logoTemporaire.current) await retirerFichierLogo(logoTemporaire.current)
     logoTemporaire.current = null
+    setF(valeursCio())
     setEdition(false)
   }
 
@@ -125,6 +136,7 @@ function IdentiteCio({ cio, onEnregistre, onSupprime, setErreur }) {
 
   const enregistrer = async (e) => {
     e.preventDefault()
+    if (!edition) return
     setErreur('')
     if (!f.nom.trim()) return setErreur('Le nom du CIO est obligatoire.')
     setEnvoi(true)
@@ -147,139 +159,103 @@ function IdentiteCio({ cio, onEnregistre, onSupprime, setErreur }) {
     onEnregistre()
   }
 
-  /* ---------- Mode lecture ---------- */
-  if (!edition) {
-    return (
-      <section className="carte fiche-cio">
-        <div className="fiche-cio-entete">
-          <LogoCio url={cio.logo_url} nom={cio.nom} />
-          <div className="fiche-cio-titre">
-            <span className="etape">Identité du CIO</span>
-            <h2>{cio.nom}</h2>
-            <p className="texte-doux">{cio.drena || 'DRENA non renseignée'}</p>
-          </div>
-          <div className="fiche-cio-actions">
-            <button className="btn btn-plein" onClick={ouvrirEdition}>
-              Modifier
-            </button>
-            <button className="btn btn-danger" onClick={() => setSuppression(true)}>
-              Supprimer
-            </button>
-          </div>
-        </div>
+  const verrou = !edition
 
-        <dl className="fiche-cio-infos">
-          <Info libelle="Nom du CIO" valeur={cio.nom} />
-          <Info libelle="DRENA du CIO" valeur={cio.drena} />
-          <Info libelle="Chef du CIO (DCIO)" valeur={cio.chef_cio} />
-          <Info libelle="Contact 1" valeur={cio.telephone} tel />
-          <Info libelle="Contact 2" valeur={cio.telephone2} tel />
-          <Info libelle="E-mail" valeur={cio.email} />
-          <Info libelle="Ville" valeur={cio.ville} />
-          <Info libelle="Adresse" valeur={cio.adresse} />
-        </dl>
-
-        {suppression && (
-          <SuppressionCio cio={cio} onFermer={() => setSuppression(false)} onSupprime={onSupprime} />
-        )}
-      </section>
-    )
-  }
-
-  /* ---------- Mode édition ---------- */
   return (
-    <form className="carte fiche-cio" onSubmit={enregistrer}>
-      <h2 className="carte-titre">Modifier l’identité du CIO</h2>
+    <form className={`carte fiche-cio ${edition ? 'fiche-en-edition' : ''}`} onSubmit={enregistrer}>
+      <div className="fiche-cio-bandeau">
+        <h2 className="carte-titre">Identité du CIO</h2>
+        {edition ? (
+          <span className="etiquette etiquette-alerte">Modification en cours</span>
+        ) : (
+          <span className="etiquette">Lecture seule — cliquez sur « Modifier »</span>
+        )}
+      </div>
 
       <div className="logo-edition">
         <LogoCio url={f.logo_url} nom={f.nom} />
         <div>
           <div className="champ-label">Logo du CIO</div>
-          <p className="champ-aide">PNG, JPG, WEBP ou SVG · 1 Mo maximum · de préférence carré</p>
-          <div className="logo-boutons">
-            <button
-              type="button"
-              className="btn btn-petit"
-              onClick={() => champFichier.current?.click()}
-              disabled={envoiLogo}
-            >
-              {envoiLogo ? 'Envoi…' : f.logo_url ? 'Changer le logo' : 'Ajouter un logo'}
-            </button>
-            {f.logo_url && (
-              <button type="button" className="btn btn-petit btn-discret" onClick={retirerLogo}>
-                Supprimer le logo
-              </button>
-            )}
-          </div>
-          <input
-            ref={champFichier}
-            type="file"
-            accept={TYPES_LOGO.join(',')}
-            onChange={choisirLogo}
-            hidden
-          />
+          {edition ? (
+            <>
+              <p className="champ-aide">PNG, JPG, WEBP ou SVG · 1 Mo maximum · de préférence carré</p>
+              <div className="logo-boutons">
+                <button
+                  type="button"
+                  className="btn btn-petit"
+                  onClick={() => champFichier.current?.click()}
+                  disabled={envoiLogo}
+                >
+                  {envoiLogo ? 'Envoi…' : f.logo_url ? 'Changer le logo' : 'Ajouter un logo'}
+                </button>
+                {f.logo_url && (
+                  <button type="button" className="btn btn-petit btn-discret" onClick={retirerLogo}>
+                    Retirer le logo
+                  </button>
+                )}
+              </div>
+              <input ref={champFichier} type="file" accept={TYPES_LOGO.join(',')} onChange={choisirLogo} hidden />
+            </>
+          ) : (
+            <p className="champ-aide">{f.logo_url ? 'Logo enregistré' : 'Aucun logo — cliquez sur « Modifier » pour en ajouter un'}</p>
+          )}
         </div>
       </div>
 
-      <div className="grille-2">
-        <Champ label="Nom du CIO" requis>
-          <input value={f.nom} onChange={maj('nom')} required autoFocus />
+      <fieldset disabled={verrou} className="champs-cio">
+        <div className="grille-2">
+          <Champ label="Nom du CIO" requis>
+            <input value={f.nom} onChange={maj('nom')} required />
+          </Champ>
+          <Champ label="DRENA du CIO">
+            <input value={f.drena} onChange={maj('drena')} placeholder="ex : DRENA Bouaké 1" />
+          </Champ>
+        </div>
+        <Champ label="Chef du CIO (DCIO)">
+          <input value={f.chef_cio} onChange={maj('chef_cio')} placeholder="Nom et prénoms du directeur" />
         </Champ>
-        <Champ label="DRENA du CIO">
-          <input value={f.drena} onChange={maj('drena')} placeholder="ex : DRENA Bouaké 1" />
-        </Champ>
-      </div>
-      <Champ label="Chef du CIO (DCIO)">
-        <input value={f.chef_cio} onChange={maj('chef_cio')} placeholder="Nom et prénoms du directeur" />
-      </Champ>
-      <div className="grille-2">
-        <Champ label="Contact 1">
-          <input type="tel" value={f.telephone} onChange={maj('telephone')} placeholder="ex : 07 00 00 00 00" />
-        </Champ>
-        <Champ label="Contact 2">
-          <input type="tel" value={f.telephone2} onChange={maj('telephone2')} />
-        </Champ>
-      </div>
-      <div className="grille-3">
-        <Champ label="E-mail">
-          <input type="email" value={f.email} onChange={maj('email')} />
-        </Champ>
-        <Champ label="Ville">
-          <input value={f.ville} onChange={maj('ville')} />
-        </Champ>
-        <Champ label="Adresse">
-          <input value={f.adresse} onChange={maj('adresse')} />
-        </Champ>
-      </div>
+        <div className="grille-2">
+          <Champ label="Contact 1">
+            <input type="tel" value={f.telephone} onChange={maj('telephone')} placeholder="ex : 07 00 00 00 00" />
+          </Champ>
+          <Champ label="Contact 2">
+            <input type="tel" value={f.telephone2} onChange={maj('telephone2')} />
+          </Champ>
+        </div>
+        <div className="grille-3">
+          <Champ label="E-mail">
+            <input type="email" value={f.email} onChange={maj('email')} />
+          </Champ>
+          <Champ label="Ville">
+            <input value={f.ville} onChange={maj('ville')} />
+          </Champ>
+          <Champ label="Adresse">
+            <input value={f.adresse} onChange={maj('adresse')} />
+          </Champ>
+        </div>
+      </fieldset>
 
-      <div className="actions-formulaire">
-        <button type="button" className="btn btn-discret" onClick={annuler} disabled={envoi}>
-          Annuler
-        </button>
-        <button className="btn btn-plein" disabled={envoi || envoiLogo}>
+      <div className="barre-boutons">
+        {edition && (
+          <button type="button" className="btn btn-discret" onClick={annuler} disabled={envoi}>
+            Annuler
+          </button>
+        )}
+        <button type="submit" className="btn btn-plein" disabled={!edition || envoi || envoiLogo}>
           {envoi ? 'Enregistrement…' : 'Enregistrer'}
         </button>
+        <button type="button" className="btn btn-modifier" onClick={modifier} disabled={edition}>
+          Modifier
+        </button>
+        <button type="button" className="btn btn-danger" onClick={() => setSuppression(true)} disabled={edition}>
+          Supprimer
+        </button>
       </div>
-    </form>
-  )
-}
 
-function Info({ libelle, valeur, tel }) {
-  return (
-    <div className="info">
-      <dt>{libelle}</dt>
-      <dd>
-        {valeur ? (
-          tel ? (
-            <a href={`tel:${valeur.replace(/\s/g, '')}`}>{valeur}</a>
-          ) : (
-            valeur
-          )
-        ) : (
-          <span className="texte-vide">Non renseigné</span>
-        )}
-      </dd>
-    </div>
+      {suppression && (
+        <SuppressionCio cio={cio} onFermer={() => setSuppression(false)} onSupprime={onSupprime} />
+      )}
+    </form>
   )
 }
 
@@ -338,7 +314,7 @@ function SuppressionCio({ cio, onFermer, onSupprime }) {
         <button type="button" className="btn btn-discret" onClick={onFermer}>
           Annuler
         </button>
-        <button className="btn btn-danger-plein" onClick={supprimer} disabled={!correspond || envoi}>
+        <button type="button" className="btn btn-danger-plein" onClick={supprimer} disabled={!correspond || envoi}>
           {envoi ? 'Suppression…' : 'Supprimer définitivement'}
         </button>
       </div>
